@@ -1,0 +1,3 @@
+[submodule "mach-glfw"]
+	path = mach-glfw
+	url = https://github.com/slimsag/mach-glfw
