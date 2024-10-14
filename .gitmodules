@@ -1,3 +1,6 @@
 [submodule "mach-glfw"]
 	path = mach-glfw
 	url = https://github.com/slimsag/mach-glfw
+[submodule "glfw"]
+	path = glfw
+	url = https://github.com/slimsag/glfw.git

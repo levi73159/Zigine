@@ -16,9 +16,17 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const glfw_dep = b.dependency("glfw", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const zigine_module = b.addModule("zigine", .{
         .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
     });
+    zigine_module.linkLibrary(glfw_dep.artifact("glfw"));
 
     const exe = b.addExecutable(.{
         .name = "sandbox",
@@ -26,7 +34,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    // exe.linkLibrary(zigine_lib); // does not need, sandbox uses the zigine as module
+
+    exe.linkLibrary(glfw_dep.artifact("glfw"));
+    exe.linkSystemLibrary("opengl");
     exe.root_module.addImport("zigine", zigine_module);
 
     if (enable_sandbox) {
