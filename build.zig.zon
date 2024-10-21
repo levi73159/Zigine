@@ -14,7 +14,13 @@
     // `zig build --fetch` can be used to fetch all dependencies of a package, recursively.
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
-    .dependencies = .{ .glfw = .{ .path = "glfw" } },
+    .dependencies = .{
+        .glfw = .{ .path = "vendor/glfw" },
+        .zigglgen = .{
+            .url = "git+https://github.com/castholm/zigglgen#33ee1647f577e057ca05dac568101a0f42e590a1",
+            .hash = "1220c68f8d7e4d24baaa40da9e91b7e480b5ef41489ee147fe535de4d54195ae5c62",
+        },
+    },
 
     // Specifies the set of files and directories that are included in this package.
     // Only files and directories listed here are included in the `hash` that
@@ -28,6 +34,10 @@
         "build.zig",
         "build.zig.zon",
         "src",
+        "sandbox",
+        "README.md",
+        "LICENSE",
+        "glfw",
         // For example...
         //"LICENSE",
         //"README.md",

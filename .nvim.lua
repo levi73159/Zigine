@@ -1,7 +1,7 @@
 local dap = require("dap")
 dap.adapters.lldb = {
 	type = "executable",
-	command = "/bin/lldb-dap-18", -- adjust as needed, must be absolute path
+	command = "/bin/lldb-dap", -- adjust as needed, must be absolute path
 	name = "lldb",
 }
 

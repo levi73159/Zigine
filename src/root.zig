@@ -4,6 +4,7 @@ pub const core_log = std.log.scoped(.Zigine);
 pub const App = @import("zigine/App.zig");
 pub const events = @import("zigine/event.zig");
 pub const Window = @import("zigine/Window.zig");
+pub const LayerInfo = @import("zigine/LayerInfo.zig");
 
 // logging
 pub const std_options: std.Options = .{

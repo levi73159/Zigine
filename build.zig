@@ -21,12 +21,29 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
+        .api = .gl,
+        .version = .@"4.6",
+        .profile = .core,
+    });
+
     const zigine_module = b.addModule("zigine", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    const zigine_lib = b.addSharedLibrary(.{
+        .name = "zigine",
+        .root_source_file = b.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize
+    });
     zigine_module.linkLibrary(glfw_dep.artifact("glfw"));
+    zigine_lib.linkLibrary(glfw_dep.artifact("glfw"));
+
+    zigine_module.addImport("gl", gl_bindings);
+    zigine_lib.root_module.addImport("gl", gl_bindings);
 
     const exe = b.addExecutable(.{
         .name = "sandbox",
@@ -36,11 +53,11 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.linkLibrary(glfw_dep.artifact("glfw"));
-    exe.linkSystemLibrary("opengl");
     exe.root_module.addImport("zigine", zigine_module);
 
     if (enable_sandbox) {
         b.installArtifact(exe);
+        exe.linkLibrary(zigine_lib);
 
         const run_exe = b.addRunArtifact(exe);
 

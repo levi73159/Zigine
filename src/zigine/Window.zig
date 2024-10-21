@@ -4,9 +4,12 @@ const glfw_callbacks = @import("glfw_callbacks.zig");
 const builtin = @import("builtin");
 const Event = @import("event.zig").Event;
 const log = @import("../root.zig").core_log;
+const gl = @import("gl");
 
 const Self = @This();
 var glfw_init: bool = false;
+
+var opengl_procs: gl.ProcTable = undefined;
 
 pub const Props = struct {
     title: [:0]const u8,
@@ -33,6 +36,7 @@ data: Data,
 // allocate a new Window class on heap, caller owns ptr
 pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
     log.info("Creating window {s}, ({}, {})", .{ props.title, props.width, props.height });
+
     if (!glfw_init) {
         const success = glfw.glfwInit();
         std.debug.assert(success == 1);
@@ -41,13 +45,18 @@ pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
 
         glfw_init = true;
     }
+
     const window = glfw.glfwCreateWindow(@intCast(props.width), @intCast(props.height), props.title, null, null);
     if (window == null) {
         return error.WindowCreateFailed;
     }
     glfw.glfwMakeContextCurrent(window);
 
-    const ptr = try allocator.create(Self);
+    if (!opengl_procs.init(glfw.glfwGetProcAddress)) return error.OpenGLInit;
+
+    gl.makeProcTableCurrent(&opengl_procs);
+
+    const ptr = allocator.create(Self) catch unreachable;
     ptr.* = Self{ .data = Data.fromProps(props), .window = window.? };
     glfw.glfwSetWindowUserPointer(window, &ptr.data);
     glfw_callbacks.setCallbacks(window);

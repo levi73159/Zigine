@@ -4,3 +4,6 @@
 [submodule "glfw"]
 	path = glfw
 	url = https://github.com/slimsag/glfw.git
+[submodule "cimgui.zig"]
+	path = cimgui.zig
+	url = https://github.com/tiawl/cimgui.zig.git

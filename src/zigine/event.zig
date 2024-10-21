@@ -107,6 +107,11 @@ pub const Event = struct {
             .categorys = getCategorys(data),
         };
     }
+
+    pub fn format(self: @This(), comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
+        var buf: [1024]u8 = undefined;
+        try writer.print("{s}", .{try self.data.getStringBuf(&buf)});
+    }
 };
 
 pub const ButtonData = packed struct { button: i32 };
