@@ -273,6 +273,7 @@ pub fn build(b: *std.Build) void {
             imgui.addCSourceFiles(.{
                 .files = &.{
                     "libs/imgui/backends/imgui_impl_glfw.cpp",
+                    "libs/imgui/backends/imgui_impl_dx12.cpp",
                 },
                 .flags = cflags,
             });

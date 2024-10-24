@@ -17,10 +17,6 @@
     .dependencies = .{
         .glfw = .{ .path = "vendor/zglfw" },
         .imgui = .{ .path = "vendor/zgui" },
-        .zopengl = .{ .path = "vendor/zopengl" },
-        .zgpu = .{ .path = "vendor/zgpu" },
-        .zpool = .{ .path = "vendor/zpool" },
-        .system_sdk = .{ .path = "vendor/system-sdk" },
         .zigglgen = .{
             .url = "git+https://github.com/castholm/zigglgen#5e9e161202e3db77094bd237538a1c6f0cd353f6",
             .hash = "1220bb9525c0017b47826ec2a7263face70b33961efb3134d5df936e083cb8f608d3",

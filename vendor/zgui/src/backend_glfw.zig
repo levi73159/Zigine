@@ -6,7 +6,7 @@ const gui = @import("gui.zig");
 pub fn init(
     window: *const anyopaque, // zglfw.Window
 ) void {
-    if (!ImGui_ImplGlfw_InitForOther(window, false)) {
+    if (!ImGui_ImplGlfw_InitForOther(window, true)) {
         unreachable;
     }
 }
@@ -14,7 +14,7 @@ pub fn init(
 pub fn initOpenGL(
     window: *const anyopaque, // zglfw.Window
 ) void {
-    if (!ImGui_ImplGlfw_InitForOpenGL(window, false)) {
+    if (!ImGui_ImplGlfw_InitForOpenGL(window, true)) {
         unreachable;
     }
 }

@@ -26,6 +26,7 @@ extern "C"
         return __FLT_MAX__;
     }
     */
+
     ZGUI_API void zguiSetAllocatorFunctions(
         void *(*alloc_func)(size_t, void *),
         void (*free_func)(void *, void *))
@@ -343,7 +344,7 @@ extern "C"
         ImGui::AlignTextToFramePadding();
     }
 
-    ZGUI_API float zguiGetTextLineHeight()
+    ZGUI_API float zguiGetTextLineHeight(void)
     {
         return ImGui::GetTextLineHeight();
     }
@@ -1431,14 +1432,6 @@ extern "C"
     ZGUI_API const char *zguiGetClipboardText(void)
     {
         return ImGui::GetClipboardText();
-    }
-
-    ZGUI_API void zguiIoSetKey(ImGuiKey imgui_key, int new_code) {
-        ImGui::GetIO().KeyMap[imgui_key] = new_code;
-    }
-
-    ZGUI_API void zguiIoSetKeyDown(int key, bool down) {
-        ImGui::GetIO().KeysDown[key] = down;
     }
 
     ZGUI_API ImFont *zguiIoAddFontFromFileWithConfig(

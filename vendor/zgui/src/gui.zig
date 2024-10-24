@@ -197,16 +197,6 @@ pub const FontConfig = extern struct {
 };
 
 pub const io = struct {
-    pub fn setKeyMapping(key: Key, new: i32) void {
-        zguiIoSetKey(@intFromEnum(key), new);
-    }
-    extern fn zguiIoSetKey(imgui_key: c_int, new_key: c_int) void;
-
-    pub fn setKeyDown(any_key: i32, down: bool) void {
-        zguiIoSetKeyDown(any_key, down);
-    }
-    extern fn zguiIoSetKeyDown(imgui_key: c_int, down: bool) void;
-
     pub fn addFontFromFile(filename: [:0]const u8, size_pixels: f32) Font {
         return zguiIoAddFontFromFile(filename, size_pixels);
     }
