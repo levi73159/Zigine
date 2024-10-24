@@ -7,3 +7,6 @@
 [submodule "cimgui.zig"]
 	path = cimgui.zig
 	url = https://github.com/tiawl/cimgui.zig.git
+[submodule "vendor/imgui"]
+	path = vendor/imgui
+	url = https://github.com/tiawl/cimgui.zig.git

@@ -1,7 +1,8 @@
 const std = @import("std");
 
 const gl = @import("gl");
-const glfw = @import("glfw.zig");
+const glfw = @import("glfw");
+const input = @import("input.zig");
 const log = @import("../root.zig").core_log;
 const event = @import("event.zig");
 const Window = @import("Window.zig");
@@ -17,20 +18,21 @@ allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
 
+var instance: ?*Self = null;
 var procs: gl.ProcTable = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !*Self {
-    const ptr = allocator.create(Self) catch unreachable;
-    ptr.* = Self{
+    std.debug.assert(instance == null);
+
+    instance = try allocator.create(Self);
+    instance.?.* = Self{
         .window = try Window.init(allocator, .{ .title = "Zigine Engine", .width = 1280, .height = 720 }),
         .allocator = allocator,
         .layer_stack = LayerStack.init(allocator),
     };
-    ptr.window.data.event_callback = Window.EventCallbackFn.fromMethod(ptr, &onEvent);
+    instance.?.window.data.event_callback = Window.EventCallbackFn.fromMethod(instance.?, &onEvent);
 
-    var id: u32 = undefined;
-    gl.GenVertexArrays(1, @ptrCast(&id));
-    return ptr;
+    return instance.?;
 }
 
 pub fn deinit(self: *Self) void {
@@ -38,6 +40,10 @@ pub fn deinit(self: *Self) void {
     self.window.shutdown();
     self.allocator.destroy(self.window);
     gl.makeProcTableCurrent(null);
+}
+
+pub fn get() ?*Self {
+    return instance;
 }
 
 fn onEvent(self: *Self, e: *event.Event) void {
@@ -62,11 +68,13 @@ pub fn onWindowClose(self: *Self, _: event.Event) bool {
 
 // calls for layerstack
 pub fn pushLayer(self: *Self, layer: anytype) !void {
-    try self.layer_stack.pushLayer(layer);
+    const actual_layer = try self.layer_stack.pushLayer(layer);
+    actual_layer.onAttach();
 }
 
 pub fn pushOverlay(self: *Self, overlay: anytype) !void {
-    try self.layer_stack.pushOverlay(overlay);
+    const actual_layer = try self.layer_stack.pushOverlay(overlay);
+    actual_layer.onAttach();
 }
 
 pub fn run(self: *Self) void {

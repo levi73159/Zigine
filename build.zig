@@ -17,8 +17,11 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const glfw_dep = b.dependency("glfw", .{
-        .target = target,
-        .optimize = optimize,
+    });
+    const imgui_dep = b.dependency("imgui", .{
+        .shared = false,
+        .with_implot = true,
+        .backend = .glfw_opengl3,
     });
 
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
@@ -42,6 +45,15 @@ pub fn build(b: *std.Build) void {
     zigine_module.linkLibrary(glfw_dep.artifact("glfw"));
     zigine_lib.linkLibrary(glfw_dep.artifact("glfw"));
 
+    zigine_module.linkLibrary(imgui_dep.artifact("imgui"));
+    zigine_lib.linkLibrary(imgui_dep.artifact("imgui"));
+
+    zigine_module.addImport("glfw", glfw_dep.module("root"));
+    zigine_lib.root_module.addImport("glfw", glfw_dep.module("root"));
+
+    zigine_module.addImport("imgui", imgui_dep.module("root"));
+    zigine_lib.root_module.addImport("imgui", imgui_dep.module("root"));
+
     zigine_module.addImport("gl", gl_bindings);
     zigine_lib.root_module.addImport("gl", gl_bindings);
 
@@ -58,6 +70,7 @@ pub fn build(b: *std.Build) void {
     if (enable_sandbox) {
         b.installArtifact(exe);
         exe.linkLibrary(zigine_lib);
+
 
         const run_exe = b.addRunArtifact(exe);
 

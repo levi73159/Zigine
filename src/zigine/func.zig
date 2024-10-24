@@ -8,7 +8,7 @@ pub fn ReturnFunc(comptime T: type, comptime RetT: type) type {
             method: *const fn (self: *anyopaque, arg1: T) RetT,
         },
 
-        pub fn fromFunc(func: *const fn (arg1: T) void) Self {
+        pub fn fromFunc(func: *const fn (arg1: T) RetT) Self {
             return Self{ .function = func };
         }
 

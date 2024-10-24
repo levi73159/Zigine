@@ -1,10 +1,11 @@
 const std = @import("std");
-const glfw = @import("glfw.zig");
+const glfw = @import("glfw");
 const glfw_callbacks = @import("glfw_callbacks.zig");
 const builtin = @import("builtin");
 const Event = @import("event.zig").Event;
 const log = @import("../root.zig").core_log;
 const gl = @import("gl");
+const imgui = @import("imgui");
 
 const Self = @This();
 var glfw_init: bool = false;
@@ -30,7 +31,10 @@ pub const Data = struct {
     }
 };
 
-window: *glfw.GLFWwindow,
+// pub const current_window: ?*glfw.Window = null;
+
+/// the main context for the window, which this class is built on, right now this is the glfw window
+native: *glfw.Window,
 data: Data,
 
 // allocate a new Window class on heap, caller owns ptr
@@ -38,46 +42,61 @@ pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
     log.info("Creating window {s}, ({}, {})", .{ props.title, props.width, props.height });
 
     if (!glfw_init) {
-        const success = glfw.glfwInit();
-        std.debug.assert(success == 1);
-
-        _ = glfw.glfwSetErrorCallback(glfw_callbacks.glfwErrorCallback);
-
+        try glfw.init();
+        _ = glfw.setErrorCallback(glfw_callbacks.glfwErrorCallback);
         glfw_init = true;
     }
 
-    const window = glfw.glfwCreateWindow(@intCast(props.width), @intCast(props.height), props.title, null, null);
-    if (window == null) {
-        return error.WindowCreateFailed;
-    }
-    glfw.glfwMakeContextCurrent(window);
+    glfw.windowHintTyped(.context_version_major, gl.info.version_major);
+    glfw.windowHintTyped(.context_version_minor, gl.info.version_minor);
+    glfw.windowHintTyped(.opengl_profile, if (gl.info.profile == .core) .opengl_core_profile else .opengl_compat_profile);
 
-    if (!opengl_procs.init(glfw.glfwGetProcAddress)) return error.OpenGLInit;
+    const window = try glfw.Window.create(@intCast(props.width), @intCast(props.height), props.title, null);
+    glfw.makeContextCurrent(window);
+
+    // current_window = window;
+
+    if (!opengl_procs.init(glfw.getProcAddress)) return error.OpenGLInit;
 
     gl.makeProcTableCurrent(&opengl_procs);
 
     const ptr = allocator.create(Self) catch unreachable;
-    ptr.* = Self{ .data = Data.fromProps(props), .window = window.? };
-    glfw.glfwSetWindowUserPointer(window, &ptr.data);
+    ptr.* = Self{ .data = Data.fromProps(props), .native = window };
+    window.setUserPointer(&ptr.data);
     glfw_callbacks.setCallbacks(window);
+
+    log.info("Opengl version: {?s}\n\n", .{gl.GetString(gl.VERSION)});
+
+    imgui.init(allocator);
+    imgui.backend.initWithGlSlVersion(window, "#version 410");
 
     return ptr;
 }
 
+pub inline fn getSize(self: Self) [2]i32 {
+    return self.native.getSize();
+}
+
+pub inline fn getFrameBufferSize(self: Self) [2]i32 {
+    return self.native.getFramebufferSize();
+}
+
 pub fn onUpdate(self: Self) void {
-    glfw.glfwPollEvents();
-    glfw.glfwSwapBuffers(self.window);
+    glfw.pollEvents();
+    self.native.swapBuffers();
 }
 
 pub fn shutdown(self: Self) void {
-    glfw.glfwDestroyWindow(self.window);
+    imgui.backend.deinit();
+    imgui.deinit();
+    self.native.destroy();
 }
 
 pub fn setVsync(self: *Self, enable: bool) void {
     if (enable) {
-        glfw.glfwSwapInterval(1);
+        glfw.swapInterval(1);
     } else {
-        glfw.glfwSwapInterval(0);
+        glfw.swapInterval(0);
     }
 
     self.data.vsync = enable;

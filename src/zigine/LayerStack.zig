@@ -106,15 +106,17 @@ pub fn items(self: Self) []const Layer {
     return self.layers.items;
 }
 
-pub fn pushLayer(self: *Self, layer: anytype) !void {
+pub fn pushLayer(self: *Self, layer: anytype) !Layer {
     const actual_layer = Layer.init(@TypeOf(layer), self.allocator, layer);
     try self.layers.insert(self.allocator, self.layer_insert, actual_layer);
     self.layer_insert += 1;
+    return actual_layer;
 }
 
-pub fn pushOverlay(self: Self, overlay: anytype) !void {
+pub fn pushOverlay(self: *Self, overlay: anytype) !Layer {
     const actual_layer = Layer.init(@TypeOf(overlay), self.allocator, overlay);
     try self.layers.append(self.allocator, actual_layer);
+    return actual_layer;
 }
 
 pub fn popLayer(self: Self) ?Layer {

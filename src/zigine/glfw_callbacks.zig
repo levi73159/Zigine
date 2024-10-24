@@ -1,13 +1,14 @@
 const std = @import("std");
-const glfw = @import("glfw.zig");
+const glfw = @import("glfw");
+const imgui = @import("imgui");
 const Data = @import("Window.zig").Data;
 const Event = @import("event.zig").Event;
+const input = @import("input.zig");
 
 const log = @import("../root.zig").core_log;
 
-fn getUserData(window: ?*glfw.GLFWwindow) *Data {
-    const raw_userptr = glfw.glfwGetWindowUserPointer(window) orelse std.debug.panic("GLFW User pointer not setup or not found!", .{});
-    const data: *Data = @ptrCast(@alignCast(raw_userptr));
+fn getUserData(window: *glfw.Window) *Data {
+    const data: *Data = window.getUserPointer(Data).?;
     return data;
 }
 
@@ -19,11 +20,11 @@ inline fn callbackCall(data: *Data, event: *Event) void {
     }
 }
 
-pub fn glfwErrorCallback(err: c_int, description: [*c]const u8) callconv(.C) void {
+pub fn glfwErrorCallback(err: i32, description: *?[:0]const u8) callconv(.C) void {
     log.err("GLFW Error({}): {s}", .{ err, description });
 }
 
-pub fn glfwWindowResizeCallback(window: ?*glfw.GLFWwindow, c_width: c_int, c_height: c_int) callconv(.C) void {
+pub fn glfwWindowResizeCallback(window: *glfw.Window, c_width: i32, c_height: i32) callconv(.C) void {
     const data = getUserData(window);
     const width: u32 = @intCast(c_width);
     const height: u32 = @intCast(c_height);
@@ -34,59 +35,66 @@ pub fn glfwWindowResizeCallback(window: ?*glfw.GLFWwindow, c_width: c_int, c_hei
     callbackCall(data, &event);
 }
 
-pub fn glfwWindowCloseCallback(window: ?*glfw.GLFWwindow) callconv(.C) void {
+pub fn glfwWindowCloseCallback(window: *glfw.Window) callconv(.C) void {
     const data = getUserData(window);
 
     var event = Event.init(.window_close);
     callbackCall(data, &event);
 }
 
-pub fn glfwKeyCallback(window: ?*glfw.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
+pub fn glfwKeyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = scancode;
     _ = mods;
     const data = getUserData(window);
 
     var event: Event = switch (action) {
-        glfw.GLFW_PRESS => Event.init(.{ .key_pressed = .{ .button = @intCast(key), .repeat_count = 0 } }),
-        glfw.GLFW_REPEAT => Event.init(.{ .key_pressed = .{ .button = @intCast(key), .repeat_count = 1 } }),
-        glfw.GLFW_RELEASE => Event.init(.{ .key_released = .{ .button = @intCast(key) } }),
-        else => unreachable,
+        .press => Event.init(.{ .key_pressed = .{ .button = input.Key.fromGLFW(key), .repeat_count = 0 } }),
+        .repeat => Event.init(.{ .key_pressed = .{ .button = input.Key.fromGLFW(key), .repeat_count = 1 } }),
+        .release => Event.init(.{ .key_released = input.Key.fromGLFW(key) }),
     };
 
     callbackCall(data, &event);
 }
 
-pub fn glfwMouseBtnCallback(window: ?*glfw.GLFWwindow, button: c_int, action: c_int, mods: c_int) callconv(.C) void {
+pub fn glfwTypeCallback(window: *glfw.Window, codepoint: u32) callconv(.C) void {
+    const data = getUserData(window);
+
+    var event = Event.init(.{ .key_typed = codepoint });
+    callbackCall(data, &event);
+}
+
+pub fn glfwMouseBtnCallback(window: *glfw.Window, button: glfw.MouseButton, action: glfw.Action, mods: glfw.Mods) callconv(.C) void {
     _ = mods;
     const data = getUserData(window);
 
     var event: Event = switch (action) {
-        glfw.GLFW_PRESS => Event.init(.{ .mouse_button_pressed = .{ .button = @intCast(button) } }),
-        glfw.GLFW_RELEASE => Event.init(.{ .mouse_button_released = .{ .button = @intCast(button) } }),
+        .press => Event.init(.{ .mouse_button_pressed = input.MouseButton.fromGLFW(button) }),
+        .release => Event.init(.{ .mouse_button_released = input.MouseButton.fromGLFW(button) }),
         else => unreachable,
     };
     callbackCall(data, &event);
 }
 
-pub fn glfwMouseScrollCallback(window: ?*glfw.GLFWwindow, xOffset: f64, yOffset: f64) callconv(.C) void {
+pub fn glfwMouseScrollCallback(window: *glfw.Window, xOffset: f64, yOffset: f64) callconv(.C) void {
     const data = getUserData(window);
 
     var event = Event.init(.{ .mouse_scrolled = .{ .x = xOffset, .y = yOffset } });
     callbackCall(data, &event);
 }
 
-pub fn glfwCursorPosCallback(window: ?*glfw.GLFWwindow, xOffset: f64, yOffset: f64) callconv(.C) void {
+pub fn glfwCursorPosCallback(window: *glfw.Window, xOffset: f64, yOffset: f64) callconv(.C) void {
     const data = getUserData(window);
 
     var event = Event.init(.{ .mouse_moved = .{ .x = xOffset, .y = yOffset } });
     callbackCall(data, &event);
 }
 
-pub fn setCallbacks(window: ?*glfw.GLFWwindow) void {
-    _ = glfw.glfwSetWindowSizeCallback(window, glfwWindowResizeCallback);
-    _ = glfw.glfwSetWindowCloseCallback(window, glfwWindowCloseCallback);
-    _ = glfw.glfwSetKeyCallback(window, glfwKeyCallback);
-    _ = glfw.glfwSetMouseButtonCallback(window, glfwMouseBtnCallback);
-    _ = glfw.glfwSetScrollCallback(window, glfwMouseScrollCallback);
-    _ = glfw.glfwSetCursorPosCallback(window, glfwCursorPosCallback);
+pub fn setCallbacks(window: *glfw.Window) void {
+    _ = window.setSizeCallback(glfwWindowResizeCallback);
+    _ = window.setCloseCallback(glfwWindowCloseCallback);
+    _ = window.setKeyCallback(glfwKeyCallback);
+    _ = window.setCharCallback(glfwTypeCallback);
+    _ = window.setMouseButtonCallback(glfwMouseBtnCallback);
+    _ = window.setScrollCallback(glfwMouseScrollCallback);
+    _ = window.setCursorPosCallback(glfwCursorPosCallback);
 }

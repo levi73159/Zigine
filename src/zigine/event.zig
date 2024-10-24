@@ -1,5 +1,7 @@
 const std = @import("std");
 const ReturnFunc = @import("func.zig").ReturnFunc;
+const Key = @import("input.zig").Key;
+const MouseButton = @import("input.zig").MouseButton;
 
 // macro function
 fn bit(comptime shift: u32) u32 {
@@ -47,7 +49,7 @@ pub const EventDispatcher = struct {
 // zig fmt: off
 const EventType = enum {
     none,
-    key_pressed, key_released,
+    key_pressed, key_typed, key_released,
     mouse_moved, mouse_scrolled, mouse_button_pressed, mouse_button_released,
     window_resize, window_close, window_focus, window_lost_focus,
     app_tick, app_update, app_render
@@ -57,11 +59,13 @@ const EventType = enum {
 pub const EventData = union(EventType) {
     none: void,
     key_pressed: ButtonDataRepeat,
-    key_released: ButtonData,
+    /// key_typed is not a key, but a codepoint
+    key_typed: u32,
+    key_released: Key,
     mouse_moved: VectorData(f64),
     mouse_scrolled: VectorData(f64),
-    mouse_button_pressed: ButtonData,
-    mouse_button_released: ButtonData,
+    mouse_button_pressed: MouseButton,
+    mouse_button_released: MouseButton,
     window_resize: VectorData(u32),
     window_close: void,
     window_focus: void,
@@ -72,7 +76,7 @@ pub const EventData = union(EventType) {
 
     pub fn getStringBuf(self: EventData, buf: []u8) std.fmt.BufPrintError![]const u8 {
         return switch (self) {
-            .key_released, .mouse_button_pressed, .mouse_button_released => |btn| std.fmt.bufPrint(buf, "{s}: button={}", .{ @tagName(self), btn.button }),
+            .key_released, .key_typed, .mouse_button_pressed, .mouse_button_released => |btn| std.fmt.bufPrint(buf, "{s}: button={}", .{ @tagName(self), btn.button }),
             .key_pressed => |btn| std.fmt.bufPrint(buf, "{s}: button={}, repeated={}", .{ @tagName(self), btn.button, btn.repeat_count }),
             .mouse_moved, .mouse_scrolled => |vec| std.fmt.bufPrint(buf, "{s}: x={d}, y={d}", .{ @tagName(self), vec.x, vec.y }),
             .window_resize => |vec| std.fmt.bufPrint(buf, "{s}: x={}, y={}", .{ @tagName(self), vec.x, vec.y }),
@@ -90,7 +94,7 @@ pub const Event = struct {
     fn getCategorys(data: EventData) [3]EventCategory {
         return switch (data) {
             .none => .{ EventCategory.none, EventCategory.none, EventCategory.none },
-            .key_pressed, .key_released => .{ EventCategory.keyboard, EventCategory.input, EventCategory.none },
+            .key_pressed, .key_typed, .key_released => .{ EventCategory.keyboard, EventCategory.input, EventCategory.none },
             .mouse_moved, .mouse_scrolled => .{ EventCategory.mouse, EventCategory.input, EventCategory.none },
             .mouse_button_pressed, .mouse_button_released => .{ EventCategory.mouse, EventCategory.mouse_btn, EventCategory.input },
             .window_resize, .window_close, .window_focus, .window_lost_focus, .app_tick, .app_update, .app_render => .{ EventCategory.application, EventCategory.none, EventCategory.none },
@@ -114,9 +118,7 @@ pub const Event = struct {
     }
 };
 
-pub const ButtonData = packed struct { button: i32 };
-pub const ButtonDataRepeat = packed struct { button: i32, repeat_count: u32 };
-// pub const VectorData = packed struct { x: u32, y: u32 };
+pub const ButtonDataRepeat = packed struct { button: Key, repeat_count: u32 };
 pub fn VectorData(comptime T: type) type {
     return packed struct { x: T, y: T };
 }

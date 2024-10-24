@@ -19,18 +19,30 @@ const ExampleLayer = struct {
 
     pub fn onUpdate(self: *ExampleLayer) void {
         _ = self;
-        // log.info("Update on example", .{});
-    }
-
-    pub fn onEvent(self: *ExampleLayer, e: *zigine.events.Event) void {
-        _ = self;
-        log.info("{}", .{e});
+        log.debug("Tab Pressed? {}", .{zigine.input.isKeyPressed(.tab)});
     }
 };
 
+inline fn errPush() noreturn {
+    log.err("Unrecovable error while pushing", .{});
+    std.process.abort();
+}
+
 export fn createApp() *zigine.App {
-    const app = zigine.App.init(gpa.allocator()) catch |err| std.debug.panic("Failed to init app due to {any}", .{err});
-    app.pushLayer(ExampleLayer.init()) catch @panic("Unrecovable Error when pushing layer");
+    const app = zigine.App.init(gpa.allocator()) catch |err| switch (err) {
+        error.NotInitialized,
+        error.APIUnavailable,
+        error.InvalidEnum,
+        error.InvalidValue,
+        error.VersionUnavailable,
+        error.PlatformUnavailable,
+        error.PlatformError,
+        => std.debug.panic("Failed to init app due to glfw {any}", .{err}),
+        error.OutOfMemory => std.debug.panic("Program doesn't have enough memory to init app!!!", .{}),
+        else => std.debug.panic("Failed to init app due to: {any}", .{err}),
+    };
+    app.pushLayer(ExampleLayer.init()) catch errPush();
+    app.pushOverlay(zigine.ImGuiLayer.init()) catch errPush();
     return app;
 }
 
