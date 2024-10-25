@@ -7,6 +7,7 @@ const log = @import("../root.zig").core_log;
 const event = @import("event.zig");
 const Window = @import("Window.zig");
 const LayerStack = @import("LayerStack.zig");
+const ImGuiLayer = @import("imgui/ImGuiLayer.zig");
 
 const Self = @This();
 
@@ -17,6 +18,8 @@ window: *Window,
 allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
+
+_imgui_layer: *ImGuiLayer, // built into application
 
 var instance: ?*Self = null;
 var procs: gl.ProcTable = undefined;
@@ -29,8 +32,11 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
         .window = try Window.init(allocator, .{ .title = "Zigine Engine", .width = 1280, .height = 720 }),
         .allocator = allocator,
         .layer_stack = LayerStack.init(allocator),
+        ._imgui_layer = undefined,
     };
     instance.?.window.data.event_callback = Window.EventCallbackFn.fromMethod(instance.?, &onEvent);
+
+    instance.?._imgui_layer = instance.?.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
 
     return instance.?;
 }
@@ -72,6 +78,12 @@ pub fn pushLayer(self: *Self, layer: anytype) !void {
     actual_layer.onAttach();
 }
 
+pub fn pushOverlayAndGet(self: *Self, layer: anytype) !*@TypeOf(layer) {
+    const actual_layer = try self.layer_stack.pushOverlay(layer);
+    actual_layer.onAttach();
+    return @ptrCast(@alignCast(actual_layer.ctx));
+}
+
 pub fn pushOverlay(self: *Self, overlay: anytype) !void {
     const actual_layer = try self.layer_stack.pushOverlay(overlay);
     actual_layer.onAttach();
@@ -85,6 +97,12 @@ pub fn run(self: *Self) void {
         for (self.layer_stack.items()) |layer| {
             layer.onUpdate();
         }
+
+        self._imgui_layer.begin();
+        for (self.layer_stack.items()) |layer| {
+            layer.onImGuiRender();
+        }
+        self._imgui_layer.end();
 
         self.window.onUpdate();
     }

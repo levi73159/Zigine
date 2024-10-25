@@ -68,7 +68,6 @@ pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
     log.info("Opengl version: {?s}\n\n", .{gl.GetString(gl.VERSION)});
 
     imgui.init(allocator);
-    imgui.backend.initWithGlSlVersion(window, "#version 410");
 
     return ptr;
 }

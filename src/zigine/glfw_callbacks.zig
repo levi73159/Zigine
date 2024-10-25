@@ -48,9 +48,9 @@ pub fn glfwKeyCallback(window: *glfw.Window, key: glfw.Key, scancode: i32, actio
     const data = getUserData(window);
 
     var event: Event = switch (action) {
-        .press => Event.init(.{ .key_pressed = .{ .button = input.Key.fromGLFW(key), .repeat_count = 0 } }),
-        .repeat => Event.init(.{ .key_pressed = .{ .button = input.Key.fromGLFW(key), .repeat_count = 1 } }),
-        .release => Event.init(.{ .key_released = input.Key.fromGLFW(key) }),
+        .press => Event.init(.{ .key_pressed = .{ .button = input.Key.fromNative(key), .repeat_count = 0 } }),
+        .repeat => Event.init(.{ .key_pressed = .{ .button = input.Key.fromNative(key), .repeat_count = 1 } }),
+        .release => Event.init(.{ .key_released = input.Key.fromNative(key) }),
     };
 
     callbackCall(data, &event);
@@ -68,8 +68,8 @@ pub fn glfwMouseBtnCallback(window: *glfw.Window, button: glfw.MouseButton, acti
     const data = getUserData(window);
 
     var event: Event = switch (action) {
-        .press => Event.init(.{ .mouse_button_pressed = input.MouseButton.fromGLFW(button) }),
-        .release => Event.init(.{ .mouse_button_released = input.MouseButton.fromGLFW(button) }),
+        .press => Event.init(.{ .mouse_button_pressed = input.MouseButton.fromNative(button) }),
+        .release => Event.init(.{ .mouse_button_released = input.MouseButton.fromNative(button) }),
         else => unreachable,
     };
     callbackCall(data, &event);

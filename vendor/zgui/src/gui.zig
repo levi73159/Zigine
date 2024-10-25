@@ -646,6 +646,10 @@ extern fn zguiRender() void;
 /// `pub fn getDrawData() DrawData`
 pub const getDrawData = zguiGetDrawData;
 extern fn zguiGetDrawData() DrawData;
+// ------------------------------------------------------------------------------------------------
+/// `pub fn updatePlatformWindows() void` updates and set rendeer platform default
+pub const updatePlatformWindows = zguiUpdatePlatformWindows;
+extern fn zguiUpdatePlatformWindows() void;
 //--------------------------------------------------------------------------------------------------
 //
 // Demo, Debug, Information

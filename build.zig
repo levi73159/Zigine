@@ -9,6 +9,22 @@ const test_targets = [_]std.Target.Query{
     .{ .cpu_arch = .x86_64, .os_tag = .windows },
 };
 
+var zigine_module: *std.Build.Module = undefined;
+var zigine_lib: *std.Build.Step.Compile = undefined;
+
+pub fn libLink(dep: *std.Build.Dependency, name: []const u8) void {
+    zigine_module.linkLibrary(dep.artifact(name));
+    zigine_lib.linkLibrary(dep.artifact(name));
+
+    zigine_module.addImport(name, dep.module("root"));
+    zigine_lib.root_module.addImport(name, dep.module("root"));
+}
+
+pub fn importModule(name: []const u8, dep: *std.Build.Dependency) void {
+    zigine_module.addImport(name, dep.module(name));
+    zigine_lib.root_module.addImport(name, dep.module(name));
+}
+
 pub fn build(b: *std.Build) void {
     // zig fmt: off
     const enable_sandbox: bool = b.option(bool, "sandbox", "Build the sandbox executable") orelse true;
@@ -23,6 +39,10 @@ pub fn build(b: *std.Build) void {
         .with_implot = true,
         .backend = .glfw_opengl3,
     });
+    const zalgebra_dep = b.dependency("zalgebra", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
         .api = .gl,
@@ -30,32 +50,26 @@ pub fn build(b: *std.Build) void {
         .profile = .core,
     });
 
-    const zigine_module = b.addModule("zigine", .{
+    zigine_module = b.addModule("zigine", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const zigine_lib = b.addSharedLibrary(.{
+    zigine_lib = b.addSharedLibrary(.{
         .name = "zigine",
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize
     });
-    zigine_module.linkLibrary(glfw_dep.artifact("glfw"));
-    zigine_lib.linkLibrary(glfw_dep.artifact("glfw"));
 
-    zigine_module.linkLibrary(imgui_dep.artifact("imgui"));
-    zigine_lib.linkLibrary(imgui_dep.artifact("imgui"));
-
-    zigine_module.addImport("glfw", glfw_dep.module("root"));
-    zigine_lib.root_module.addImport("glfw", glfw_dep.module("root"));
-
-    zigine_module.addImport("imgui", imgui_dep.module("root"));
-    zigine_lib.root_module.addImport("imgui", imgui_dep.module("root"));
+    libLink(glfw_dep, "glfw");
+    libLink(imgui_dep, "imgui");
 
     zigine_module.addImport("gl", gl_bindings);
     zigine_lib.root_module.addImport("gl", gl_bindings);
+
+    importModule("zalgebra", zalgebra_dep);
 
     const exe = b.addExecutable(.{
         .name = "sandbox",
@@ -64,13 +78,11 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.linkLibrary(glfw_dep.artifact("glfw"));
     exe.root_module.addImport("zigine", zigine_module);
 
     if (enable_sandbox) {
         b.installArtifact(exe);
         exe.linkLibrary(zigine_lib);
-
 
         const run_exe = b.addRunArtifact(exe);
 

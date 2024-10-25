@@ -19,6 +19,7 @@ const Layer = struct {
     attach_fn: ?BasicFunc,
     detach_fn: ?BasicFunc,
     update_fn: ?BasicFunc,
+    imgui_render_fn: ?BasicFunc,
     event_fn: ?EventFunc,
     deinit_fn: ?MemFunc,
 
@@ -51,6 +52,7 @@ const Layer = struct {
             .attach_fn = getMethod(BasicFunc, "onAttach", layer_override),
             .detach_fn = getMethod(BasicFunc, "onDetach", layer_override),
             .update_fn = getMethod(BasicFunc, "onUpdate", layer_override),
+            .imgui_render_fn = getMethod(BasicFunc, "onImGuiRender", layer_override),
             .event_fn = getMethod(EventFunc, "onEvent", layer_override),
             .deinit_fn = getMethod(MemFunc, "deinit", layer_override),
         };
@@ -74,6 +76,12 @@ const Layer = struct {
 
     pub fn onUpdate(self: Layer) void {
         if (self.update_fn) |func| {
+            func(self.ctx);
+        }
+    }
+
+    pub fn onImGuiRender(self: Layer) void {
+        if (self.imgui_render_fn) |func| {
             func(self.ctx);
         }
     }

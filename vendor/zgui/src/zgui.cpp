@@ -188,6 +188,12 @@ extern "C"
         return ImGui::GetWindowHeight();
     }
 
+    ZGUI_API void zguiUpdatePlatformWindows(void)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
+
     ZGUI_API void zguiGetMouseDragDelta(ImGuiMouseButton button, float lock_threshold, float delta[2])
     {
         const ImVec2 d = ImGui::GetMouseDragDelta(button, lock_threshold);

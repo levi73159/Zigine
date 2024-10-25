@@ -5,12 +5,12 @@ const App = @import("App.zig");
 
 // no need for release cause if it is this will be false
 pub inline fn isKeyPressed(key: Key) bool {
-    const state = App.get().?.window.native.getKey(key.toGLFW());
+    const state = App.get().?.window.native.getKey(key.toNative());
     return state == .press or state == .repeat;
 }
 
 pub inline fn isMouseButtonPressed(btn: MouseButton) bool {
-    const state = App.get().?.window.native.getMouseButton(btn.toGLFW());
+    const state = App.get().?.window.native.getMouseButton(btn.toNative());
     return state == .press or state == .repeat;
 }
 
@@ -151,12 +151,12 @@ pub const Key = enum(u32) {
     menu = 348,
 
     // eventually these will change once we include other windowing managers so we can cast different window managers keys to this
-    pub fn toGLFW(key: Key) @import("glfw").Key {
+    pub fn toNative(key: Key) @import("glfw").Key {
         if (key == .unknown) return .unknown; // because our unknow is 0 but glfw wants -1
         return @enumFromInt(@intFromEnum(key));
     }
 
-    pub fn fromGLFW(key: @import("glfw").Key) Key {
+    pub fn fromNative(key: @import("glfw").Key) Key {
         if (key == .unknown) return .unknown; // because our unknow is 0 but glfw wants -1
         return @enumFromInt(@intFromEnum(key));
     }
@@ -172,11 +172,11 @@ pub const MouseButton = enum(u32) {
     seven,
     eight,
 
-    pub fn toGLFW(btn: MouseButton) @import("glfw").MouseButton {
+    pub fn toNative(btn: MouseButton) @import("glfw").MouseButton {
         return @enumFromInt(@intFromEnum(btn));
     }
 
-    pub fn fromGLFW(btn: @import("glfw").MouseButton) MouseButton {
+    pub fn fromNative(btn: @import("glfw").MouseButton) MouseButton {
         return @enumFromInt(@intFromEnum(btn));
     }
 };

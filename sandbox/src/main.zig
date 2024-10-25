@@ -42,7 +42,6 @@ export fn createApp() *zigine.App {
         else => std.debug.panic("Failed to init app due to: {any}", .{err}),
     };
     app.pushLayer(ExampleLayer.init()) catch errPush();
-    app.pushOverlay(zigine.ImGuiLayer.init()) catch errPush();
     return app;
 }
 
