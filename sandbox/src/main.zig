@@ -1,5 +1,6 @@
 const std = @import("std");
 const zigine = @import("zigine");
+const imgui = @import("imgui");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
@@ -17,9 +18,18 @@ const ExampleLayer = struct {
         allocator.destroy(self);
     }
 
+    var window_open: bool = true;
+    pub fn onImGuiRender(self: *ExampleLayer) void {
+        _ = self;
+
+        if (imgui.begin("Example", .{})) {
+            imgui.text("Hello world coming from example", .{});
+        }
+        imgui.end();
+    }
+
     pub fn onUpdate(self: *ExampleLayer) void {
         _ = self;
-        log.debug("Tab Pressed? {}", .{zigine.input.isKeyPressed(.tab)});
     }
 };
 

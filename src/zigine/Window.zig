@@ -7,6 +7,8 @@ const log = @import("../root.zig").core_log;
 const gl = @import("gl");
 const imgui = @import("imgui");
 
+const GraphicsContext = @import("renderer/graphicsContext.zig").GraphicsContext;
+
 const Self = @This();
 var glfw_init: bool = false;
 
@@ -34,7 +36,8 @@ pub const Data = struct {
 // pub const current_window: ?*glfw.Window = null;
 
 /// the main context for the window, which this class is built on, right now this is the glfw window
-native: *glfw.Window,
+// native: *glfw.Window,
+context: GraphicsContext, // the native window is stored in context now
 data: Data,
 
 // allocate a new Window class on heap, caller owns ptr
@@ -52,43 +55,44 @@ pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
     glfw.windowHintTyped(.opengl_profile, if (gl.info.profile == .core) .opengl_core_profile else .opengl_compat_profile);
 
     const window = try glfw.Window.create(@intCast(props.width), @intCast(props.height), props.title, null);
-    glfw.makeContextCurrent(window);
-
-    // current_window = window;
-
-    if (!opengl_procs.init(glfw.getProcAddress)) return error.OpenGLInit;
-
-    gl.makeProcTableCurrent(&opengl_procs);
 
     const ptr = allocator.create(Self) catch unreachable;
-    ptr.* = Self{ .data = Data.fromProps(props), .native = window };
+    ptr.* = Self{
+        .data = Data.fromProps(props),
+        .context = GraphicsContext.new(window),
+    };
+
+    try ptr.context.init();
     window.setUserPointer(&ptr.data);
     glfw_callbacks.setCallbacks(window);
 
-    log.info("Opengl version: {?s}\n\n", .{gl.GetString(gl.VERSION)});
-
+    // finally initlizing imgui
     imgui.init(allocator);
-
     return ptr;
 }
 
 pub inline fn getSize(self: Self) [2]i32 {
-    return self.native.getSize();
+    return self.getNative().getSize();
 }
 
 pub inline fn getFrameBufferSize(self: Self) [2]i32 {
-    return self.native.getFramebufferSize();
+    return self.getNative().getFramebufferSize();
 }
 
 pub fn onUpdate(self: Self) void {
     glfw.pollEvents();
-    self.native.swapBuffers();
+    self.context.swapBuffers();
 }
 
 pub fn shutdown(self: Self) void {
     imgui.backend.deinit();
     imgui.deinit();
-    self.native.destroy();
+    self.getNative().destroy();
+}
+
+/// just returns the `self.context.window_handle`
+pub fn getNative(self: Self) *GraphicsContext.NativeWindowHandle {
+    return self.context.window_handle;
 }
 
 pub fn setVsync(self: *Self, enable: bool) void {

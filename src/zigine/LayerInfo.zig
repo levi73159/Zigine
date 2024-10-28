@@ -4,7 +4,9 @@
 //! - onAttach(self: *anyopeque) void : anyopeque meaining it can be any pointer
 //! - onDetach(self: *anyopegue) void
 //! - onUpdate(self: *anyopegue) void
+//! - onImGuiRender(self: *anyopegue) void
 //! - onEvent(self: *anyopegue, event: *Event) void
+//! - deinit(self: *anyopegue, allocator: std.mem.Allocator) void
 const Self = @This();
 
 name: []const u8,

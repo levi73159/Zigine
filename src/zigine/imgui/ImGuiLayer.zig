@@ -37,13 +37,10 @@ pub fn onAttach(_: *Self) void {
 
     const app = App.get().?;
 
-    imgui.backend.initWithGlSlVersion(app.window.native, "#version 410");
+    imgui.backend.initWithGlSlVersion(app.window.getNative(), "#version 410");
 }
 
-pub fn onDetach(_: *Self) void {
-    imgui.backend.deinit();
-    imgui.deinit();
-}
+pub fn onDetach(_: *Self) void {}
 
 pub fn begin(_: *Self) void {
     const app = App.get().?;

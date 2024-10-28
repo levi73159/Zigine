@@ -1,5 +1,4 @@
 const std = @import("std");
-
 const gl = @import("gl");
 const glfw = @import("glfw");
 const input = @import("input.zig");
@@ -8,6 +7,9 @@ const event = @import("event.zig");
 const Window = @import("Window.zig");
 const LayerStack = @import("LayerStack.zig");
 const ImGuiLayer = @import("imgui/ImGuiLayer.zig");
+const Shader = @import("renderer/Shader.zig");
+
+const buffer = @import("renderer/buffer.zig");
 
 const Self = @This();
 
@@ -18,11 +20,14 @@ window: *Window,
 allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
+vertex_buffer: *const buffer.VertexBuffer,
+index_buffer: *const buffer.IndexBuffer,
+vertex_array: u32 = 0,
+shader: *Shader,
 
 _imgui_layer: *ImGuiLayer, // built into application
 
 var instance: ?*Self = null;
-var procs: gl.ProcTable = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !*Self {
     std.debug.assert(instance == null);
@@ -32,19 +37,50 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
         .window = try Window.init(allocator, .{ .title = "Zigine Engine", .width = 1280, .height = 720 }),
         .allocator = allocator,
         .layer_stack = LayerStack.init(allocator),
+        .vertex_buffer = undefined,
+        .index_buffer = undefined,
+        .shader = create: {
+            const ptr = try allocator.create(Shader);
+            ptr.* = try Shader.init(allocator, @embedFile("renderer/vertSrc.glsl"), @embedFile("renderer/fragSrc.glsl"));
+            break :create ptr;
+        },
         ._imgui_layer = undefined,
     };
-    instance.?.window.data.event_callback = Window.EventCallbackFn.fromMethod(instance.?, &onEvent);
 
-    instance.?._imgui_layer = instance.?.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
+    const self = instance.?;
+    self.window.data.event_callback = Window.EventCallbackFn.fromMethod(self, &onEvent);
 
+    self._imgui_layer = self.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
+
+    gl.GenVertexArrays(1, @ptrCast(&self.vertex_array));
+    gl.BindVertexArray(self.vertex_array);
+
+    const vertices = [_]f32{
+        -0.5, -0.5, 0.0,
+        0.5,  -0.5, 0.0,
+        0.0,  0.5,  0.0,
+    };
+
+    self.vertex_buffer = buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
+
+    // vertex pos
+    gl.EnableVertexAttribArray(0);
+    gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
+
+    const indices = [_]u32{ 0, 1, 2 };
+
+    self.index_buffer = buffer.IndexBuffer.create(allocator, &indices) catch unreachable;
     return instance.?;
 }
 
 pub fn deinit(self: *Self) void {
     self.layer_stack.deinit();
     self.window.shutdown();
+
+    self.vertex_buffer.destroy(self.allocator);
+    self.index_buffer.destroy(self.allocator);
     self.allocator.destroy(self.window);
+    self.allocator.destroy(self.shader);
     gl.makeProcTableCurrent(null);
 }
 
@@ -92,8 +128,13 @@ pub fn pushOverlay(self: *Self, overlay: anytype) !void {
 pub fn run(self: *Self) void {
     self.running = true;
     while (self.running) {
-        gl.ClearColor(0.2, 0.4, 0.6, 1.0);
+        gl.ClearColor(0.1, 0.1, 0.1, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT);
+
+        self.shader.bind();
+        gl.BindVertexArray(self.vertex_array);
+        gl.DrawElements(gl.TRIANGLES, @truncate(self.index_buffer.count), gl.UNSIGNED_INT, 0);
+
         for (self.layer_stack.items()) |layer| {
             layer.onUpdate();
         }

@@ -105,6 +105,7 @@ pub fn init(allocator: std.mem.Allocator) Self {
 
 pub fn deinit(self: *Self) void {
     for (self.layers.items) |layer| {
+        layer.onDetach();
         layer.deinit(self.allocator);
     }
     self.layers.deinit(self.allocator);

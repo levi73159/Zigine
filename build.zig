@@ -79,6 +79,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.addImport("zigine", zigine_module);
+    exe.root_module.addImport("imgui", imgui_dep.module("root"));
 
     if (enable_sandbox) {
         b.installArtifact(exe);
@@ -88,7 +89,7 @@ pub fn build(b: *std.Build) void {
 
         const run_step = b.step("run", "Run the application");
         run_step.dependOn(&run_exe.step);
-    } 
+    }
 
     const test_step = b.step("test", "Run unit tests");
     for (test_targets) |test_target| {
