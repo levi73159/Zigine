@@ -20,8 +20,8 @@ window: *Window,
 allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
-vertex_buffer: *const buffer.VertexBuffer,
-index_buffer: *const buffer.IndexBuffer,
+vertex_buffer: *buffer.VertexBuffer,
+index_buffer: *buffer.IndexBuffer,
 vertex_array: u32 = 0,
 shader: *Shader,
 
@@ -56,16 +56,35 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
     gl.BindVertexArray(self.vertex_array);
 
     const vertices = [_]f32{
-        -0.5, -0.5, 0.0,
-        0.5,  -0.5, 0.0,
-        0.0,  0.5,  0.0,
+        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0,
+        0.5,  -0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
+        0.0,  0.5,  0.0, 0.0, 0.0, 1.0, 1.0,
     };
 
     self.vertex_buffer = buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
 
+    const Element = buffer.BufferElement; // just to make it easier
+    const layout = buffer.BufferLayout.init(allocator, &.{
+        Element.init("a_Position", .float3),
+        Element.init("a_Color", .float4),
+    });
+    self.vertex_buffer.setLayout(layout);
+
     // vertex pos
-    gl.EnableVertexAttribArray(0);
-    gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
+    // gl.EnableVertexAttribArray(0);
+    // gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
+
+    for (self.vertex_buffer.layout.elements.items, 0..) |element, i| {
+        gl.EnableVertexAttribArray(@intCast(i));
+        gl.VertexAttribPointer(
+            @intCast(i),
+            @intCast(element.type.count()),
+            element.type.nativeType(),
+            if (element.normalized) gl.TRUE else gl.FALSE,
+            @intCast(self.vertex_buffer.layout.stride),
+            @intCast(element.offset),
+        );
+    }
 
     const indices = [_]u32{ 0, 1, 2 };
 

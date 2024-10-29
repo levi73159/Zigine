@@ -42,7 +42,7 @@ data: Data,
 
 // allocate a new Window class on heap, caller owns ptr
 pub fn init(allocator: std.mem.Allocator, props: Props) !*Self {
-    log.info("Creating window {s}, ({}, {})", .{ props.title, props.width, props.height });
+    log.info("Creating window \"{s}\", ({}, {})", .{ props.title, props.width, props.height });
 
     if (!glfw_init) {
         try glfw.init();

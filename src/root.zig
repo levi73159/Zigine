@@ -23,14 +23,21 @@ pub fn logFn(
     comptime format: []const u8,
     args: anytype,
 ) void {
+    const color_prefix = comptime switch (level) {
+        .info => "\x1b[0;34m", // blue
+        .warn => "\x1b[0;33m", // yellow
+        .err => "\x1b[0;31m", // red
+        else => "\x1b[0m",
+    };
+    const suffix = "\x1b[0m";
     const scope_prefix = @tagName(scope);
-    const prefix = "[" ++ comptime level.asText() ++ "] " ++ scope_prefix ++ ": ";
+    const prefix = color_prefix ++ "[" ++ comptime level.asText() ++ "] " ++ scope_prefix ++ ": ";
 
     std.debug.lockStdErr();
     defer std.debug.unlockStdErr();
 
     const stderr = std.io.getStdErr().writer();
-    nosuspend stderr.print(prefix ++ format ++ "\n", args) catch return;
+    nosuspend stderr.print(prefix ++ format ++ suffix ++ "\n", args) catch return;
 }
 
 comptime {
