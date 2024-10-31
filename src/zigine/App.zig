@@ -10,6 +10,7 @@ const ImGuiLayer = @import("imgui/ImGuiLayer.zig");
 const Shader = @import("renderer/Shader.zig");
 
 const buffer = @import("renderer/buffer.zig");
+const VertexArray = @import("renderer/vertexArray.zig").VertexArray;
 
 const Self = @This();
 
@@ -20,9 +21,10 @@ window: *Window,
 allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
-vertex_buffer: *buffer.VertexBuffer,
-index_buffer: *buffer.IndexBuffer,
-vertex_array: u32 = 0,
+
+// Graphics pointers
+vertex_array: *VertexArray,
+square_va: *VertexArray,
 shader: *Shader,
 
 _imgui_layer: *ImGuiLayer, // built into application
@@ -37,8 +39,8 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
         .window = try Window.init(allocator, .{ .title = "Zigine Engine", .width = 1280, .height = 720 }),
         .allocator = allocator,
         .layer_stack = LayerStack.init(allocator),
-        .vertex_buffer = undefined,
-        .index_buffer = undefined,
+        .vertex_array = undefined,
+        .square_va = undefined,
         .shader = create: {
             const ptr = try allocator.create(Shader);
             ptr.* = try Shader.init(allocator, @embedFile("renderer/vertSrc.glsl"), @embedFile("renderer/fragSrc.glsl"));
@@ -52,8 +54,7 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
 
     self._imgui_layer = self.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
 
-    gl.GenVertexArrays(1, @ptrCast(&self.vertex_array));
-    gl.BindVertexArray(self.vertex_array);
+    self.vertex_array = VertexArray.create(allocator) catch unreachable;
 
     const vertices = [_]f32{
         -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0,
@@ -61,34 +62,44 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
         0.0,  0.5,  0.0, 0.0, 0.0, 1.0, 1.0,
     };
 
-    self.vertex_buffer = buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
+    const vertex_buffer = buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
 
     const Element = buffer.BufferElement; // just to make it easier
     const layout = buffer.BufferLayout.init(allocator, &.{
         Element.init("a_Position", .float3),
         Element.init("a_Color", .float4),
     });
-    self.vertex_buffer.setLayout(layout);
+
+    vertex_buffer.setLayout(layout);
+    self.vertex_array.addVertexBuffer(vertex_buffer);
 
     // vertex pos
     // gl.EnableVertexAttribArray(0);
     // gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
 
-    for (self.vertex_buffer.layout.elements.items, 0..) |element, i| {
-        gl.EnableVertexAttribArray(@intCast(i));
-        gl.VertexAttribPointer(
-            @intCast(i),
-            @intCast(element.type.count()),
-            element.type.nativeType(),
-            if (element.normalized) gl.TRUE else gl.FALSE,
-            @intCast(self.vertex_buffer.layout.stride),
-            @intCast(element.offset),
-        );
-    }
-
     const indices = [_]u32{ 0, 1, 2 };
 
-    self.index_buffer = buffer.IndexBuffer.create(allocator, &indices) catch unreachable;
+    const index_buffer = buffer.IndexBuffer.create(allocator, &indices) catch unreachable;
+    self.vertex_array.setIndexBuffer(index_buffer);
+
+    // create square va
+    const square_verts = [_]f32{
+        -0.75, -0.75, 0.0, 1.0, 0.0, 0.0, 1.0,
+        0.75,  -0.75, 0.0, 0.0, 0.3, 0.7, 1.0,
+        0.75,  0.75,  0.0, 0.2, 0.4, 0.6, 1.0,
+        -0.75, 0.75,  0.0, 0.6, 0.0, 0.6, 1.0,
+    };
+    const square_vb = buffer.VertexBuffer.create(allocator, &square_verts) catch unreachable;
+    square_vb.setLayout(layout.clone());
+
+    self.square_va = VertexArray.create(allocator) catch unreachable;
+    self.square_va.addVertexBuffer(square_vb);
+
+    const indices_square = [_]u32{ 0, 1, 2, 2, 3, 0 };
+
+    const square_ib = buffer.IndexBuffer.create(allocator, &indices_square) catch unreachable;
+    self.square_va.setIndexBuffer(square_ib);
+
     return instance.?;
 }
 
@@ -96,8 +107,9 @@ pub fn deinit(self: *Self) void {
     self.layer_stack.deinit();
     self.window.shutdown();
 
-    self.vertex_buffer.destroy(self.allocator);
-    self.index_buffer.destroy(self.allocator);
+    // makes sure we actually free and destroy all the buffers in the vertex arrays
+    self.square_va.destroyAll();
+    self.vertex_array.destroyAll();
     self.allocator.destroy(self.window);
     self.allocator.destroy(self.shader);
     gl.makeProcTableCurrent(null);
@@ -150,9 +162,13 @@ pub fn run(self: *Self) void {
         gl.ClearColor(0.1, 0.1, 0.1, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT);
 
+        // draw square
         self.shader.bind();
-        gl.BindVertexArray(self.vertex_array);
-        gl.DrawElements(gl.TRIANGLES, @truncate(self.index_buffer.count), gl.UNSIGNED_INT, 0);
+        self.square_va.bind();
+        gl.DrawElements(gl.TRIANGLES, self.square_va.getIndexBufferCountGL(), gl.UNSIGNED_INT, 0);
+
+        self.vertex_array.bind();
+        gl.DrawElements(gl.TRIANGLES, self.vertex_array.getIndexBufferCountGL(), gl.UNSIGNED_INT, 0);
 
         for (self.layer_stack.items()) |layer| {
             layer.onUpdate();

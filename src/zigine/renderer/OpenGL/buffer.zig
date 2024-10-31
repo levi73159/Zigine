@@ -7,10 +7,11 @@ const log = std.log.scoped(.OpenGL);
 pub const VertexBuffer = struct {
     const Self = @This();
     renderer_id: u32 = 0,
-    layout: BufferLayout,
+    layout: ?BufferLayout,
 
     pub fn create(allocator: std.mem.Allocator, vertices: []const f32) !*Self {
         const self = try allocator.create(Self);
+        self.layout = null;
 
         gl.CreateBuffers(1, @ptrCast(&self.renderer_id));
         gl.BindBuffer(gl.ARRAY_BUFFER, self.renderer_id);
@@ -21,7 +22,9 @@ pub const VertexBuffer = struct {
 
     pub fn destroy(self: *const Self, allocator: std.mem.Allocator) void {
         gl.DeleteBuffers(1, @constCast(@ptrCast(&self.renderer_id)));
-        self.layout.deinit();
+        if (self.layout) |layout| {
+            layout.deinit();
+        }
         allocator.destroy(self);
     }
 
@@ -35,7 +38,7 @@ pub const VertexBuffer = struct {
 
     pub fn setLayout(self: *Self, layout: BufferLayout) void {
         // don't display this message in release
-        if (dbg and self.layout.elements.items.len == 0) log.debug("setting an empty layout", .{});
+        if (dbg and layout.elements.items.len == 0) log.debug("setting an empty layout", .{});
         self.layout = layout;
     }
 };
@@ -175,6 +178,13 @@ pub const BufferLayout = struct {
         self.elements.appendSlice(elements) catch unreachable;
         self.calcualteOffsetAndStride();
         return self;
+    }
+
+    pub fn clone(self: Self) Self {
+        return Self{
+            .elements = self.elements.clone() catch unreachable,
+            .stride = self.stride,
+        };
     }
 
     pub fn deinit(self: Self) void {
