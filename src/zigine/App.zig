@@ -112,7 +112,6 @@ pub fn deinit(self: *Self) void {
     self.vertex_array.destroyAll();
     self.allocator.destroy(self.window);
     self.allocator.destroy(self.shader);
-    gl.makeProcTableCurrent(null);
 }
 
 pub fn get() ?*Self {
