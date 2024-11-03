@@ -12,8 +12,6 @@ const GraphicsContext = @import("renderer/graphicsContext.zig").GraphicsContext;
 const Self = @This();
 var glfw_init: bool = false;
 
-var opengl_procs: gl.ProcTable = undefined;
-
 pub const Props = struct {
     title: [:0]const u8,
     width: u32,

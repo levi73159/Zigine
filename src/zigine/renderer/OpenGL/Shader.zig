@@ -1,7 +1,7 @@
 const std = @import("std");
 const gl = @import("gl");
 
-const log = @import("../../root.zig").core_log;
+const log = std.log.scoped(.OpenGL);
 
 const Self = @This();
 

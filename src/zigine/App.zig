@@ -1,16 +1,16 @@
 const std = @import("std");
-const gl = @import("gl");
-const glfw = @import("glfw");
 const input = @import("input.zig");
 const log = @import("../root.zig").core_log;
 const event = @import("event.zig");
 const Window = @import("Window.zig");
 const LayerStack = @import("LayerStack.zig");
 const ImGuiLayer = @import("imgui/ImGuiLayer.zig");
-const Shader = @import("renderer/Shader.zig");
+const Shader = @import("renderer/shader.zig").Shader;
 
 const buffer = @import("renderer/buffer.zig");
 const VertexArray = @import("renderer/vertexArray.zig").VertexArray;
+const renderer = @import("renderer/renderer.zig");
+const renderCommand = @import("renderer/renderCommand.zig");
 
 const Self = @This();
 
@@ -159,16 +159,18 @@ pub fn pushOverlay(self: *Self, overlay: anytype) !void {
 pub fn run(self: *Self) void {
     self.running = true;
     while (self.running) {
-        gl.ClearColor(0.1, 0.1, 0.1, 1.0);
-        gl.Clear(gl.COLOR_BUFFER_BIT);
+        renderCommand.setClearColor(.{ .data = .{ 0.1, 0.1, 0.1, 1.0 } });
+        renderCommand.clear();
+
+        renderer.beginScene();
 
         // draw square
         self.shader.bind();
-        self.square_va.bind();
-        gl.DrawElements(gl.TRIANGLES, self.square_va.getIndexBufferCountGL(), gl.UNSIGNED_INT, 0);
 
-        self.vertex_array.bind();
-        gl.DrawElements(gl.TRIANGLES, self.vertex_array.getIndexBufferCountGL(), gl.UNSIGNED_INT, 0);
+        renderer.submit(self.square_va);
+        renderer.submit(self.vertex_array);
+
+        renderer.endScene();
 
         for (self.layer_stack.items()) |layer| {
             layer.onUpdate();

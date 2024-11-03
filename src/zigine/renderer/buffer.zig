@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const buffers = switch (@import("Renderer.zig").api) {
+const buffers = switch (@import("renderer.zig").api) {
     .OpenGL => @import("OpenGL/buffer.zig"),
     .None => struct {},
     else => @compileError("Unsupported graphics api"),

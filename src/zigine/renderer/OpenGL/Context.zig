@@ -25,6 +25,12 @@ pub fn init(self: Self) !void {
     log.info("    OpenGL version: {?s}", .{gl.GetString(gl.VERSION)});
 }
 
+// not really needed but might be useful
+pub fn deinit() void {
+    glfw.makeContextCurrent(null);
+    gl.makeProcTableCurrent(null);
+}
+
 pub fn swapBuffers(self: Self) void {
     self.window_handle.swapBuffers();
 }
