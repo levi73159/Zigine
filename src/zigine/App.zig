@@ -1,5 +1,6 @@
 const std = @import("std");
 const input = @import("input.zig");
+const za = @import("zalgebra");
 const log = @import("../root.zig").core_log;
 const event = @import("event.zig");
 const Window = @import("Window.zig");
@@ -11,6 +12,7 @@ const buffer = @import("renderer/buffer.zig");
 const VertexArray = @import("renderer/vertexArray.zig").VertexArray;
 const renderer = @import("renderer/renderer.zig");
 const renderCommand = @import("renderer/renderCommand.zig");
+const cams = @import("renderer/camera.zig");
 
 const Self = @This();
 
@@ -26,6 +28,8 @@ running: bool = false,
 vertex_array: *VertexArray,
 square_va: *VertexArray,
 shader: *Shader,
+
+camera: cams.OrthoCamera,
 
 _imgui_layer: *ImGuiLayer, // built into application
 
@@ -46,6 +50,7 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
             ptr.* = try Shader.init(allocator, @embedFile("renderer/vertSrc.glsl"), @embedFile("renderer/fragSrc.glsl"));
             break :create ptr;
         },
+        .camera = cams.OrthoCamera.init(-1.6, 1.6, -0.9, 0.9),
         ._imgui_layer = undefined,
     };
 
@@ -118,6 +123,41 @@ pub fn get() ?*Self {
     return instance;
 }
 
+var x: f32 = 0;
+pub fn run(self: *Self) void {
+    self.running = true;
+    while (self.running) {
+        renderCommand.setClearColor(.{ .data = .{ 0.1, 0.1, 0.1, 1.0 } });
+        renderCommand.clear();
+
+        self.camera.setPosition(za.Vec3.new(x, 0, 0));
+        x += 0.005;
+
+        renderer.beginScene(&self.camera);
+
+        // draw square
+        self.shader.bind();
+        self.shader.uploadUnifromMat4("u_VP", self.camera.view_proj_mat);
+
+        renderer.submit(self.square_va, self.shader);
+        renderer.submit(self.vertex_array, null); // because we are using the same shader
+
+        renderer.endScene();
+
+        for (self.layer_stack.items()) |layer| {
+            layer.onUpdate();
+        }
+
+        self._imgui_layer.begin();
+        for (self.layer_stack.items()) |layer| {
+            layer.onImGuiRender();
+        }
+        self._imgui_layer.end();
+
+        self.window.onUpdate();
+    }
+}
+
 fn onEvent(self: *Self, e: *event.Event) void {
     const EventFn = event.EventDispatcher.EventFn;
     const disptacher = event.EventDispatcher.init(e);
@@ -153,36 +193,6 @@ pub fn pushOverlayAndGet(self: *Self, layer: anytype) !*@TypeOf(layer) {
 pub fn pushOverlay(self: *Self, overlay: anytype) !void {
     const actual_layer = try self.layer_stack.pushOverlay(overlay);
     actual_layer.onAttach();
-}
-
-pub fn run(self: *Self) void {
-    self.running = true;
-    while (self.running) {
-        renderCommand.setClearColor(.{ .data = .{ 0.1, 0.1, 0.1, 1.0 } });
-        renderCommand.clear();
-
-        renderer.beginScene();
-
-        // draw square
-        self.shader.bind();
-
-        renderer.submit(self.square_va);
-        renderer.submit(self.vertex_array);
-
-        renderer.endScene();
-
-        for (self.layer_stack.items()) |layer| {
-            layer.onUpdate();
-        }
-
-        self._imgui_layer.begin();
-        for (self.layer_stack.items()) |layer| {
-            layer.onImGuiRender();
-        }
-        self._imgui_layer.end();
-
-        self.window.onUpdate();
-    }
 }
 
 /// this is to start the program

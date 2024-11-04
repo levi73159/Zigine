@@ -1,5 +1,6 @@
 const std = @import("std");
 const gl = @import("gl");
+const za = @import("zalgebra");
 
 const log = std.log.scoped(.OpenGL);
 
@@ -96,6 +97,17 @@ pub fn init(allocator: std.mem.Allocator, shaderSrc: []const u8, fragmentSrc: []
 
 pub fn deinit(self: Self) void {
     gl.DeleteProgram(self.renderer_id);
+}
+
+///must be bound first
+pub fn uploadUnifromMat4(self: Self, name: [:0]const u8, mat4: za.Mat4) void {
+    const location = gl.GetUniformLocation(self.renderer_id, name.ptr);
+    if (location == -1) {
+        // doesn't exist
+        log.warn("Unifrom of mat4 doesn't exist: {s}", .{name});
+        return;
+    }
+    gl.UniformMatrix4fv(location, 1, gl.FALSE, &mat4.data[0][0]);
 }
 
 pub fn bind(self: Self) void {
