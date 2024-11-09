@@ -62,7 +62,7 @@ pub fn end(_: *Self) void {
     }
 }
 
-var show_demo_window: bool = true;
+pub var show_demo_window: bool = true;
 pub fn onImGuiRender(_: *Self) void {
-    imgui.showDemoWindow(&show_demo_window);
+    if (show_demo_window) imgui.showDemoWindow(&show_demo_window);
 }

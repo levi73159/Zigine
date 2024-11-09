@@ -12,6 +12,7 @@ pub const OrthoCamera = struct {
     _position: za.Vec3 = za.Vec3.zero(),
     /// this two variable `position` and `rotation` should only be set using the setters
     _rotation: f32 = 0.0,
+    _zoom: f32 = 1.0,
 
     pub fn init(left: f32, right: f32, bottom: f32, top: f32) Self {
         const projection_mat = za.orthographic(left, right, bottom, top, -1.0, 1.0);
@@ -23,7 +24,7 @@ pub const OrthoCamera = struct {
         };
     }
 
-    // setters for pos roation
+    // setters for pos roation zoom
     pub fn setPosition(self: *Self, pos: za.Vec3) void {
         self._position = pos;
         self.recalculateViewMatrix();
@@ -42,10 +43,20 @@ pub const OrthoCamera = struct {
         return self._rotation;
     }
 
+    pub fn setZoom(self: *Self, zoom: f32) void {
+        self._zoom = zoom;
+        self.recalculateViewMatrix();
+    }
+
+    pub fn getZoom(self: Self) f32 {
+        return self._zoom;
+    }
+
     fn recalculateViewMatrix(self: *Self) void {
         const transform = za.Mat4.identity()
-            .rotate(self._rotation, za.Vec3.new(0, 0, 1))
-            .translate(self._position);
+            .scale(za.Vec3.new(self._zoom, self._zoom, self._zoom))
+            .translate(self._position)
+            .rotate(self._rotation, za.Vec3.new(0, 0, 1));
 
         self.view_mat = transform.inv();
         self.view_proj_mat = self.projection_mat.mul(self.view_mat);

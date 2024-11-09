@@ -1,9 +1,9 @@
 const VertexArray = @import("vertexArray.zig").VertexArray;
 const rendererAPI = @import("rendererAPI.zig");
+const Color = @import("../Color.zig");
+const Ref = @import("../ptr.zig").Ref;
 
-const za = @import("zalgebra");
-
-pub inline fn setClearColor(color: za.Vec4) void {
+pub inline fn setClearColor(color: Color) void {
     rendererAPI.setClearColor(color);
 }
 

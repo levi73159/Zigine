@@ -2,6 +2,7 @@ const std = @import("std");
 const VertexArray = @import("vertexArray.zig").VertexArray;
 const Shader = @import("shader.zig").Shader;
 const renderCommand = @import("renderCommand.zig");
+const RenderObject = @import("RenderObject.zig");
 const cam = @import("camera.zig");
 const za = @import("zalgebra");
 
@@ -22,11 +23,10 @@ pub fn beginScene(camera: *const cam.OrthoCamera) void {
 
 pub fn endScene() void {}
 
-pub fn submit(vertex_array: *const VertexArray, shader: ?*const Shader) void {
-    vertex_array.bind();
-    if (shader) |s| {
-        s.bind();
-        s.uploadUnifromMat4("u_VP", data.?.view_proj_mat);
-    }
-    renderCommand.drawIndexed(vertex_array);
+pub fn submit(object: *const RenderObject) void {
+    object.getVertexArray().bind();
+    object.getShader().bind();
+    object.getShader().uploadUnifrom("u_VP", .{ .mat4 = data.?.view_proj_mat.data });
+    object.getShader().uploadUnifrom("u_Transform", .{ .mat4 = object.transform.data });
+    renderCommand.drawIndexed(object.getVertexArray());
 }

@@ -6,11 +6,30 @@ pub const events = @import("zigine/event.zig");
 pub const Window = @import("zigine/Window.zig");
 pub const LayerInfo = @import("zigine/LayerInfo.zig");
 pub const ImGuiLayer = @import("zigine/imgui/ImGuiLayer.zig");
+pub const Color = @import("zigine/Color.zig");
+
+// renderer
+pub const renderer = @import("zigine/renderer/renderer.zig");
+pub const renderCommand = @import("zigine/renderer/renderCommand.zig");
+pub const RenderObject = @import("zigine/renderer/RenderObject.zig");
+
+// renderer - Resources
+pub const Shader = @import("zigine/renderer/shader.zig").Shader;
+pub const VertexArray = @import("zigine/renderer/vertexArray.zig").VertexArray;
+pub const buffer = @import("zigine/renderer/buffer.zig");
+
+pub const camera = @import("zigine/renderer/camera.zig");
+
+// time stuff
+pub const time = @import("zigine/time.zig");
+pub const TimeStep = @import("zigine/TimeStep.zig");
 
 // include buttons and input so we don't have to use input.Key etc
 pub const input = @import("zigine/input.zig");
 pub const Key = input.Key;
 pub const MouseButton = input.MouseButton;
+
+pub usingnamespace @import("zigine/ptr.zig");
 
 // logging
 pub const std_options: std.Options = .{

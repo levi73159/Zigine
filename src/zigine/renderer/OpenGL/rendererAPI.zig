@@ -3,9 +3,10 @@ const za = @import("zalgebra");
 const gl = @import("gl");
 
 const VertexArray = @import("VertexArray.zig");
+const Color = @import("../../Color.zig");
 
-pub fn setClearColor(color: za.Vec4) void {
-    gl.ClearColor(color.x(), color.y(), color.z(), color.w());
+pub fn setClearColor(color: Color) void {
+    gl.ClearColor(color.r(), color.g(), color.b(), color.a());
 }
 
 pub fn clear() void {

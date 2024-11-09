@@ -1,25 +1,51 @@
 const std = @import("std");
 const App = @import("App.zig");
+const za = @import("zalgebra");
 
 // based on glfw keys so easy to convert
 
 // no need for release cause if it is this will be false
 pub inline fn isKeyPressed(key: Key) bool {
-    const state = App.get().?.window.native.getKey(key.toNative());
+    const state = App.get().?.window.context.window_handle.getKey(key.toNative());
     return state == .press or state == .repeat;
 }
 
+pub fn getAxis(neg: Key, pos: Key) f32 {
+    const neg_press = isKeyPressed(neg);
+    const pos_press = isKeyPressed(pos);
+
+    if (neg_press and pos_press) return 0.0;
+    if (neg_press) return -1.0;
+    if (pos_press) return 1.0;
+
+    return 0.0;
+}
+
+pub fn getVector(neg_x: Key, pos_x: Key, neg_y: Key, pos_y: Key) za.Vec2 {
+    return za.Vec2.new(
+        getAxis(neg_x, pos_x),
+        getAxis(neg_y, pos_y),
+    );
+}
+
+/// same thing as getVector but returns an array instead of a za.Vec2
+pub fn getVectorArray(neg_x: Key, pos_x: Key, neg_y: Key, pos_y: Key) [2]f32 {
+    return .{
+        getAxis(neg_x, pos_x),
+        getAxis(neg_y, pos_y),
+    };
+}
+
 pub inline fn isMouseButtonPressed(btn: MouseButton) bool {
-    const state = App.get().?.window.native.getMouseButton(btn.toNative());
+    const state = App.get().?.window.context.window_handle.getMouseButton(btn.toNative());
     return state == .press or state == .repeat;
 }
 
 pub inline fn getMousePos() [2]f32 {
-    const pos = App.get().?.window.native.getCursorPos();
+    const pos = App.get().?.window.context.window_handle.getCursorPos();
 
     return .{ @floatCast(pos[0]), @floatCast(pos[1]) };
 }
-
 // zig fmt: off
 pub inline fn getMouseX() f32 { return getMousePos()[0]; }
 pub inline fn getMouseY() f32 { return getMousePos()[1]; }

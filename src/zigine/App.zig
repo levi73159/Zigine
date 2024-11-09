@@ -8,6 +8,9 @@ const LayerStack = @import("LayerStack.zig");
 const ImGuiLayer = @import("imgui/ImGuiLayer.zig");
 const Shader = @import("renderer/shader.zig").Shader;
 
+const TimeStep = @import("TimeStep.zig");
+const time = @import("time.zig");
+
 const buffer = @import("renderer/buffer.zig");
 const VertexArray = @import("renderer/vertexArray.zig").VertexArray;
 const renderer = @import("renderer/renderer.zig");
@@ -24,13 +27,7 @@ allocator: std.mem.Allocator,
 layer_stack: LayerStack,
 running: bool = false,
 
-// Graphics pointers
-vertex_array: *VertexArray,
-square_va: *VertexArray,
-shader: *Shader,
-
-camera: cams.OrthoCamera,
-
+_last_frame_time: f32 = 0.0,
 _imgui_layer: *ImGuiLayer, // built into application
 
 var instance: ?*Self = null;
@@ -43,14 +40,6 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
         .window = try Window.init(allocator, .{ .title = "Zigine Engine", .width = 1280, .height = 720 }),
         .allocator = allocator,
         .layer_stack = LayerStack.init(allocator),
-        .vertex_array = undefined,
-        .square_va = undefined,
-        .shader = create: {
-            const ptr = try allocator.create(Shader);
-            ptr.* = try Shader.init(allocator, @embedFile("renderer/vertSrc.glsl"), @embedFile("renderer/fragSrc.glsl"));
-            break :create ptr;
-        },
-        .camera = cams.OrthoCamera.init(-1.6, 1.6, -0.9, 0.9),
         ._imgui_layer = undefined,
     };
 
@@ -59,93 +48,27 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
 
     self._imgui_layer = self.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
 
-    self.vertex_array = VertexArray.create(allocator) catch unreachable;
-
-    const vertices = [_]f32{
-        -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0,
-        0.5,  -0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
-        0.0,  0.5,  0.0, 0.0, 0.0, 1.0, 1.0,
-    };
-
-    const vertex_buffer = buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
-
-    const Element = buffer.BufferElement; // just to make it easier
-    const layout = buffer.BufferLayout.init(allocator, &.{
-        Element.init("a_Position", .float3),
-        Element.init("a_Color", .float4),
-    });
-
-    vertex_buffer.setLayout(layout);
-    self.vertex_array.addVertexBuffer(vertex_buffer);
-
-    // vertex pos
-    // gl.EnableVertexAttribArray(0);
-    // gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
-
-    const indices = [_]u32{ 0, 1, 2 };
-
-    const index_buffer = buffer.IndexBuffer.create(allocator, &indices) catch unreachable;
-    self.vertex_array.setIndexBuffer(index_buffer);
-
-    // create square va
-    const square_verts = [_]f32{
-        -0.75, -0.75, 0.0, 1.0, 0.0, 0.0, 1.0,
-        0.75,  -0.75, 0.0, 0.0, 0.3, 0.7, 1.0,
-        0.75,  0.75,  0.0, 0.2, 0.4, 0.6, 1.0,
-        -0.75, 0.75,  0.0, 0.6, 0.0, 0.6, 1.0,
-    };
-    const square_vb = buffer.VertexBuffer.create(allocator, &square_verts) catch unreachable;
-    square_vb.setLayout(layout.clone());
-
-    self.square_va = VertexArray.create(allocator) catch unreachable;
-    self.square_va.addVertexBuffer(square_vb);
-
-    const indices_square = [_]u32{ 0, 1, 2, 2, 3, 0 };
-
-    const square_ib = buffer.IndexBuffer.create(allocator, &indices_square) catch unreachable;
-    self.square_va.setIndexBuffer(square_ib);
-
     return instance.?;
 }
 
 pub fn deinit(self: *Self) void {
     self.layer_stack.deinit();
     self.window.shutdown();
-
-    // makes sure we actually free and destroy all the buffers in the vertex arrays
-    self.square_va.destroyAll();
-    self.vertex_array.destroyAll();
     self.allocator.destroy(self.window);
-    self.allocator.destroy(self.shader);
 }
 
 pub fn get() ?*Self {
     return instance;
 }
 
-var x: f32 = 0;
 pub fn run(self: *Self) void {
     self.running = true;
     while (self.running) {
-        renderCommand.setClearColor(.{ .data = .{ 0.1, 0.1, 0.1, 1.0 } });
-        renderCommand.clear();
-
-        self.camera.setPosition(za.Vec3.new(x, 0, 0));
-        x += 0.005;
-
-        renderer.beginScene(&self.camera);
-
-        // draw square
-        self.shader.bind();
-        self.shader.uploadUnifromMat4("u_VP", self.camera.view_proj_mat);
-
-        renderer.submit(self.square_va, self.shader);
-        renderer.submit(self.vertex_array, null); // because we are using the same shader
-
-        renderer.endScene();
-
+        const time_seconds: f32 = @floatCast(@import("glfw").getTime()); // todo: change to platform.getTime()
+        time.updateTime(TimeStep{ .time = time_seconds - self._last_frame_time });
+        self._last_frame_time = time_seconds;
         for (self.layer_stack.items()) |layer| {
-            layer.onUpdate();
+            layer.onUpdate(time.timeStep());
         }
 
         self._imgui_layer.begin();
