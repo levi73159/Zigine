@@ -5,6 +5,11 @@ const gl = @import("gl");
 const VertexArray = @import("VertexArray.zig");
 const Color = @import("../../Color.zig");
 
+pub fn init() void {
+    gl.Enable(gl.BLEND);
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+
 pub fn setClearColor(color: Color) void {
     gl.ClearColor(color.r(), color.g(), color.b(), color.a());
 }

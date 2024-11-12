@@ -12,8 +12,9 @@ pub const std_options: std.Options = zine.std_options;
 const ExampleLayer = struct {
     info: zine.LayerInfo,
     camera: zine.camera.OrthoCamera,
-    triangle_object: zine.RenderObject,
     square_object: zine.RenderObject,
+    texture_shader: zine.Ref(zine.Shader),
+    texture: zine.Ref(zine.Texture2D),
     imgui_window_open: bool = true,
     clear_color: zine.Color = .{ .data = .{ 0.1, 0.1, 0.1, 1.0 } },
 
@@ -23,43 +24,21 @@ const ExampleLayer = struct {
     square_pos: za.Vec3 = .{ .data = .{ 0.0, 0.0, 0.0 } },
 
     pub fn init() ExampleLayer {
-        const vertex_array = zine.VertexArray.create(allocator) catch unreachable;
-
-        const vertices = [_]f32{
-            -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0,
-            0.5,  -0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
-            0.0,  0.5,  0.0, 0.0, 0.0, 1.0, 1.0,
-        };
-
-        const vertex_buffer = zine.buffer.VertexBuffer.create(allocator, &vertices) catch unreachable;
-
-        const Element = zine.buffer.Element; // just to make it easier
+        const Element = zine.buffer.Element;
         const layout = zine.buffer.Layout.init(allocator, &.{
             Element.init("a_Position", .float3),
-            Element.init("a_Color", .float4),
+            Element.init("a_TexCoord", .float2),
         });
-
-        vertex_buffer.value.setLayout(layout);
-        vertex_array.value.addVertexBuffer(vertex_buffer);
-
-        // vertex pos
-        // gl.EnableVertexAttribArray(0);
-        // gl.VertexAttribPointer(0, 3, gl.FLOAT, gl.FALSE, 3 * @sizeOf(f32), 0);
-
-        const indices = [_]u32{ 0, 1, 2 };
-
-        const index_buffer = zine.buffer.IndexBuffer.create(allocator, &indices) catch unreachable;
-        vertex_array.value.setIndexBuffer(index_buffer);
 
         // create square va
         const square_verts = [_]f32{
-            -0.75, -0.75, 0.0, 1.0, 0.0, 0.0, 1.0,
-            0.75,  -0.75, 0.0, 0.0, 0.3, 0.7, 1.0,
-            0.75,  0.75,  0.0, 0.2, 0.4, 0.6, 1.0,
-            -0.75, 0.75,  0.0, 0.6, 0.0, 0.6, 1.0,
+            -0.5, -0.5, 0.0, 0.0, 0.0,
+            0.5,  -0.5, 0.0, 1.0, 0.0,
+            0.5,  0.5,  0.0, 1.0, 1.0,
+            -0.5, 0.5,  0.0, 0.0, 1.0,
         };
         const square_vb = zine.buffer.VertexBuffer.create(allocator, &square_verts) catch unreachable;
-        square_vb.value.setLayout(layout.clone());
+        square_vb.value.setLayout(layout);
 
         const square_va = zine.VertexArray.create(allocator) catch unreachable;
         square_va.value.addVertexBuffer(square_vb);
@@ -69,7 +48,7 @@ const ExampleLayer = struct {
         const square_ib = zine.buffer.IndexBuffer.create(allocator, &indices_square) catch unreachable;
         square_va.value.setIndexBuffer(square_ib);
 
-        var shader = zine.Shader.create(allocator, @embedFile("vertSrc.glsl"), @embedFile("fragSrc.glsl")) catch |e| {
+        const shader = zine.Shader.create(allocator, @embedFile("vertSrc.glsl"), @embedFile("fragSrc.glsl")) catch |e| {
             switch (e) {
                 zine.Shader.Error.NoMemory => log.err("No Memory for shader creation!", .{}),
                 else => log.err("Failed to create shader due to: {any}", .{e}),
@@ -77,23 +56,47 @@ const ExampleLayer = struct {
             unreachable;
         };
 
+        const texture_shader = zine.Shader.fromFilePath(allocator, "sandbox/assets/Shaders/texture.glsl") catch |e| {
+            switch (e) {
+                zine.Shader.Error.NoMemory => log.err("No Memory for shader creation!", .{}),
+                else => log.err("Failed to create shader due to: {any}", .{e}),
+            }
+            unreachable;
+        };
+
+        const texture = zine.Texture2D.create(allocator, "sandbox/assets/Player.png") catch |err| blk: {
+            log.err("Failed to load texture: {any}", .{err});
+            if (@import("builtin").mode == .Debug) {
+                std.debug.dumpCurrentStackTrace(null);
+                std.process.abort();
+            } else {
+                break :blk undefined;
+            }
+        };
+        texture.value.bind(0);
+
+        texture_shader.value.uploadUniform("u_Texture", .{ .int = 0 });
+
         return ExampleLayer{
             .info = .{ .name = "Example" },
-            .camera = zine.camera.OrthoCamera.init(-1.6, 1.6, -0.9, 0.9),
-            .triangle_object = .{
-                .vertex_array = vertex_array,
-                .shader = shader,
+            .camera = blk: {
+                var camera = zine.camera.OrthoCamera.init(-1.6, 1.6, -0.9, 0.9);
+                camera.setZoom(1.5);
+                break :blk camera;
             },
             .square_object = .{
                 .vertex_array = square_va,
-                .shader = shader.retain(),
+                .shader = shader,
             },
+            .texture_shader = texture_shader,
+            .texture = texture,
         };
     }
 
     pub fn deinit(self: *ExampleLayer, alloc: std.mem.Allocator) void {
-        self.triangle_object.deinit();
         self.square_object.deinit();
+        self.texture_shader.releaseWithFn(zine.Shader.deinit);
+        self.texture.releaseWithFn(zine.Texture2D.deinit);
 
         alloc.destroy(self);
     }
@@ -145,16 +148,28 @@ const ExampleLayer = struct {
             for (0..20) |x| {
                 const x_float: f32 = @floatFromInt(x);
                 const y_float: f32 = @floatFromInt(y);
-                const pos = za.Vec3.new(x_float * 0.16, y_float * 0.16, 0.0);
+                const pos = za.Vec3.new(x_float * 0.11, y_float * 0.11, 0.0);
                 if (x % 2 == 0) {
-                    self.square_object.getShader().uploadUnifrom("u_Color", .{ .float4 = self.color1.data });
+                    self.square_object.getShader().uploadUniform("u_Color", .{ .float4 = self.color1.data });
                 } else {
-                    self.square_object.getShader().uploadUnifrom("u_Color", .{ .float4 = self.color2.data });
+                    self.square_object.getShader().uploadUniform("u_Color", .{ .float4 = self.color2.data });
                 }
 
                 self.square_object.transform = za.Mat4.fromTranslate(pos).mul(scale);
                 zine.renderer.submit(&self.square_object);
             }
+        }
+
+        {
+            const old_shader = self.square_object.shader;
+
+            self.square_object.shader = self.texture_shader;
+            self.texture.value.bind(0);
+
+            self.square_object.transform = za.Mat4.fromScale(za.Vec3.new(1.5, 1.5, 1.5));
+            zine.renderer.submit(&self.square_object);
+
+            self.square_object.shader = old_shader;
         }
 
         zine.renderer.endScene();

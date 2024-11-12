@@ -46,6 +46,8 @@ pub fn init(allocator: std.mem.Allocator) !*Self {
     const self = instance.?;
     self.window.data.event_callback = Window.EventCallbackFn.fromMethod(self, &onEvent);
 
+    renderer.init();
+
     self._imgui_layer = self.pushOverlayAndGet(ImGuiLayer.init()) catch unreachable;
 
     return instance.?;

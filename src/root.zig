@@ -18,6 +18,10 @@ pub const Shader = @import("zigine/renderer/shader.zig").Shader;
 pub const VertexArray = @import("zigine/renderer/vertexArray.zig").VertexArray;
 pub const buffer = @import("zigine/renderer/buffer.zig");
 
+const texture = @import("zigine/renderer/texture.zig");
+pub const Texture = texture.Texture;
+pub const Texture2D = texture.Texture2D;
+
 pub const camera = @import("zigine/renderer/camera.zig");
 
 // time stuff

@@ -15,6 +15,10 @@ const SceneData = struct {
 /// this will exist throughout the entire lifetime of the runtime
 var data: ?SceneData = null;
 
+pub fn init() void {
+    renderCommand.init();
+}
+
 pub fn beginScene(camera: *const cam.OrthoCamera) void {
     data = .{
         .view_proj_mat = camera.view_proj_mat,
@@ -26,7 +30,7 @@ pub fn endScene() void {}
 pub fn submit(object: *const RenderObject) void {
     object.getVertexArray().bind();
     object.getShader().bind();
-    object.getShader().uploadUnifrom("u_VP", .{ .mat4 = data.?.view_proj_mat.data });
-    object.getShader().uploadUnifrom("u_Transform", .{ .mat4 = object.transform.data });
+    object.getShader().uploadUniform("u_VP", .{ .mat4 = data.?.view_proj_mat.data });
+    object.getShader().uploadUniform("u_Transform", .{ .mat4 = object.transform.data });
     renderCommand.drawIndexed(object.getVertexArray());
 }

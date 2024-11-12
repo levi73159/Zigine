@@ -3,6 +3,7 @@ const za = @import("zalgebra");
 const Shader = @import("shader.zig").Shader;
 const VertexArray = @import("vertexArray.zig").VertexArray;
 const ptr = @import("../ptr.zig");
+const Texture = @import("texture.zig").Texture;
 
 const Self = @This();
 

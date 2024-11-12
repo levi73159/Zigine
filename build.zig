@@ -59,6 +59,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const zigimg_dep = b.dependency("zigimg", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
         .api = .gl,
@@ -95,6 +99,7 @@ pub fn build(b: *std.Build) void {
     importModule("zigrc", &zigrc_dep.artifact("zig-rc").root_module);
 
     exeImport(exe, "zalgebra", zalgebra_dep, true);
+    exeImport(exe, "zigimg", zigimg_dep, true);
 
     exe.root_module.addImport("zigine", zigine_module);
 

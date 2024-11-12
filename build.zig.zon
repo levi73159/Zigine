@@ -25,9 +25,10 @@
             .url = "https://github.com/kooparse/zalgebra/archive/main.tar.gz",
             .hash = "12200e1b17e15217623e36563e459164fff4debb8210ea9d027d8548aca6d30f0811",
         },
-        .zigrc = .{
-            .url = "https://github.com/Aandreba/zigrc/archive/refs/tags/0.4.0.tar.gz",
-            .hash = "122081ba85104ea10d0fd80ef7f78ff72a0f2bb07351fde7fb0f97afcd63e78d7f01",
+        .zigrc = .{ .path = "vendor/zigrc" },
+        .zigimg = .{
+            .url = "https://github.com/zigimg/zigimg/archive/d9dbbe22b5f7b5f1f4772169ed93ffeed8e8124d.tar.gz",
+            .hash = "122013646f7038ecc71ddf8a0d7de346d29a6ec40140af57f838b0a975c69af512b0",
         },
     },
 
